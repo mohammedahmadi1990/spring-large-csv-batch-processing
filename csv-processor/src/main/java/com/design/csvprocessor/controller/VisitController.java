@@ -3,7 +3,12 @@ package com.design.csvprocessor.controller;
 import com.design.csvprocessor.helper.CSVHelper;
 import com.design.csvprocessor.message.ResponseMessage;
 import com.design.csvprocessor.service.VisitService;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -17,6 +22,24 @@ public class VisitController{
 
     @Autowired
     VisitService visitService;
+
+    @Autowired
+    JobLauncher jobLauncher;
+
+    @Autowired
+    @Qualifier("importVisitJob")
+    Job importVisitJob;
+
+    @GetMapping("/run-batch-job")
+    public String handle() throws Exception
+    {
+
+        JobParameters jobParameters = new JobParametersBuilder().addString("source", "Spring Boot")
+                .toJobParameters();
+        jobLauncher.run(importVisitJob, jobParameters);
+
+        return "Batch job has been invoked";
+    }
 
     @PostMapping("/upload")
     public ResponseEntity<ResponseMessage> uploadFile(@RequestParam("file") MultipartFile file) {

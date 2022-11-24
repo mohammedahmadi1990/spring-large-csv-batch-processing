@@ -19,13 +19,13 @@ public class Visit {
     @GeneratedValue(strategy= GenerationType.IDENTITY)
     private long id;
 
-    @Column(name = "email")
+    @Column(name = "email",nullable = false)
     private String email;
 
-    @Column(name = "phone")
+    @Column(name = "phone",nullable = false)
     private String phone;
 
-    @Column(name = "source")
+    @Column(name = "source",nullable = false)
     private String source;
 
 
