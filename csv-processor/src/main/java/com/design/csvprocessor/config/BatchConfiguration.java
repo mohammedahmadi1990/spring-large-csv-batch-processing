@@ -10,7 +10,11 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepScope;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
+import org.springframework.batch.core.launch.support.SimpleJobLauncher;
+import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.file.FlatFileItemReader;
@@ -18,9 +22,14 @@ import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.PathResource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 
 @Configuration
@@ -34,17 +43,24 @@ public class BatchConfiguration
     private StepBuilderFactory stepBuilderFactory;
 
     @Autowired
+    private JobRepository jobRepository;
+
+    @Autowired
     private DataSource dataSource;
 
     /**
-     * The reader() method is used to read the data from the CSV file
+     * The method is used to read the data from the CSV file
      */
     @Bean
-    public FlatFileItemReader<Visit> reader()
+    @StepScope
+    public FlatFileItemReader<Visit> reader(@Value("#{jobParameters[filePath]}") String pathToFile)
     {
-        System.out.println("-----------Inside reader() method--------");
+
         FlatFileItemReader<Visit> reader = new FlatFileItemReader<Visit>();
-        reader.setResource(new ClassPathResource("sample_visits.csv"));
+        reader.setResource(new FileSystemResource(pathToFile));
+//        reader.setResource(new PathResource(pathToFile));
+//        reader.setResource(new ClassPathResource("sample.csv")); // local
+        reader.setStrict(false);
         reader.setLinesToSkip(1);
         reader.setLineMapper(new DefaultLineMapper<Visit>()
         {
@@ -66,6 +82,15 @@ public class BatchConfiguration
         return reader;
     }
 
+    @Bean(name = "myJobLauncher")
+    public JobLauncher simpleJobLauncher() throws Exception {
+        SimpleJobLauncher jobLauncher = new SimpleJobLauncher();
+        jobLauncher.setJobRepository(jobRepository);
+        jobLauncher.setTaskExecutor(new SimpleAsyncTaskExecutor());
+        jobLauncher.afterPropertiesSet();
+        return jobLauncher;
+    }
+
     /**
      * Intermediate processor to do the operations after the reading the data from the CSV file and
      * before writing the data into SQL.
@@ -73,12 +98,11 @@ public class BatchConfiguration
     @Bean
     public VisitItemProcessor processor()
     {
-        System.out.println("-----------Inside  processor() method--------");
         return new VisitItemProcessor();
     }
 
     /**
-     * The writer() method is used to write a data into the SQL.
+     * The method is used to write a data into the SQL.
      */
     @Bean
     public JdbcBatchItemWriter<Visit> writer()
@@ -99,9 +123,8 @@ public class BatchConfiguration
     }
 
     @Bean
-    public Step step1()
-    {
-        return stepBuilderFactory.get("step1").<Visit, Visit>chunk(4).reader(reader())
+    public Step step1(){
+        return stepBuilderFactory.get("step1").<Visit, Visit>chunk(4).reader(reader(null))
                 .processor(processor()).writer(writer()).build();
     }
 }

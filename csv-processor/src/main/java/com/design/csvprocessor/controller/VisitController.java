@@ -4,6 +4,7 @@ import com.design.csvprocessor.helper.CSVHelper;
 import com.design.csvprocessor.message.ResponseMessage;
 import com.design.csvprocessor.service.VisitService;
 import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameter;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.launch.JobLauncher;
@@ -15,6 +16,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @CrossOrigin("http://localhost:8081")
 @Controller
 @RequestMapping("/api/csv")
@@ -24,7 +28,8 @@ public class VisitController{
     VisitService visitService;
 
     @Autowired
-    JobLauncher jobLauncher;
+    @Qualifier("myJobLauncher")
+    private JobLauncher jobLauncher;
 
     @Autowired
     @Qualifier("importVisitJob")
@@ -37,9 +42,12 @@ public class VisitController{
 
         if (CSVHelper.hasCSVFormat(file)) {
             try {
+                //save file
+                visitService.save(file);
 
-                // Batch processing
+                // Async Batch processing
                 JobParameters jobParameters = new JobParametersBuilder().addString("source", "Spring Boot")
+                        .addString("filePath", file.getOriginalFilename())
                         .toJobParameters();
                 jobLauncher.run(importVisitJob, jobParameters);
 

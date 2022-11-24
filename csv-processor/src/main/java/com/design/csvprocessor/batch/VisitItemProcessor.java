@@ -14,16 +14,11 @@ import java.util.Set;
  */
 public class VisitItemProcessor implements ItemProcessor<Visit, Visit>
 {
-//    private Set<Visit> seenVisits= new HashSet<Visit>();
     private final Set<String> seenVisits= new HashSet<String>();
 
     @Override
     public Visit process(final Visit visit) throws Exception
     {
-        // Data Cleaning >> duplicates
-//        if(seenVisits.contains(visit))
-//            return null;
-
         // Data Cleaning >> nulls
         if(visit.getEmail().trim().equals("") ||
                 visit.getPhone().trim().equals("") ||
