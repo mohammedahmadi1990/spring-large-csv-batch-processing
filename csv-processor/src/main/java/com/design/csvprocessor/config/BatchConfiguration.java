@@ -45,6 +45,7 @@ public class BatchConfiguration
         System.out.println("-----------Inside reader() method--------");
         FlatFileItemReader<Visit> reader = new FlatFileItemReader<Visit>();
         reader.setResource(new ClassPathResource("sample_visits.csv"));
+        reader.setLinesToSkip(1);
         reader.setLineMapper(new DefaultLineMapper<Visit>()
         {
             {
@@ -82,7 +83,6 @@ public class BatchConfiguration
     @Bean
     public JdbcBatchItemWriter<Visit> writer()
     {
-        System.out.println("-----------Inside writer() method--------");
         JdbcBatchItemWriter<Visit> writer = new JdbcBatchItemWriter<Visit>();
         writer.setItemSqlParameterSourceProvider(
                 new BeanPropertyItemSqlParameterSourceProvider<Visit>());

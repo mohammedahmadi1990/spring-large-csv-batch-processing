@@ -1,5 +1,6 @@
 package com.design.csvprocessor.model;
 
+import com.sun.istack.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,13 +20,16 @@ public class Visit {
     @GeneratedValue(strategy= GenerationType.IDENTITY)
     private long id;
 
-    @Column(name = "email",nullable = false)
+    @Column(name = "email")
+    @NotNull
     private String email;
 
-    @Column(name = "phone",nullable = false)
+    @Column(name = "phone")
+    @NotNull
     private String phone;
 
-    @Column(name = "source",nullable = false)
+    @Column(name = "source")
+    @NotNull
     private String source;
 
 

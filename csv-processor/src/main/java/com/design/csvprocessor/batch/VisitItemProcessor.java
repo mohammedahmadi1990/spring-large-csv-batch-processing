@@ -4,6 +4,9 @@ package com.design.csvprocessor.batch;
 import com.design.csvprocessor.model.Visit;
 import org.springframework.batch.item.ItemProcessor;
 
+import java.util.HashSet;
+import java.util.Set;
+
 
 /**
  * Intermediate processor to do the operations after the reading the data from the CSV file and
@@ -11,14 +14,28 @@ import org.springframework.batch.item.ItemProcessor;
  */
 public class VisitItemProcessor implements ItemProcessor<Visit, Visit>
 {
+//    private Set<Visit> seenVisits= new HashSet<Visit>();
+    private final Set<String> seenVisits= new HashSet<String>();
 
     @Override
     public Visit process(final Visit visit) throws Exception
     {
-        final String email = visit.getEmail().toUpperCase();
-        final Visit processedVisit = new Visit(0,email, visit.getPhone(), visit.getSource());
+        // Data Cleaning >> duplicates
+//        if(seenVisits.contains(visit))
+//            return null;
 
-        return processedVisit;
+        // Data Cleaning >> nulls
+        if(visit.getEmail().trim().equals("") ||
+                visit.getPhone().trim().equals("") ||
+                visit.getSource().trim().equals(""))
+            return null;
+
+        // Data Cleaning >> uniqueness using email+phone
+        if(seenVisits.contains(visit.getEmail().trim() + visit.getPhone().trim()))
+            return null;
+
+        seenVisits.add(visit.getEmail().trim() + visit.getPhone().trim());
+        return visit;
     }
 
 }
