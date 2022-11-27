@@ -1,12 +1,9 @@
 package com.design.csvprocessor.controller;
 
-import com.design.csvprocessor.helper.CSVHelper;
 import com.design.csvprocessor.message.ResponseMessage;
 import com.design.csvprocessor.service.VisitService;
-import org.springframework.batch.core.Job;
-import org.springframework.batch.core.JobParameter;
-import org.springframework.batch.core.JobParameters;
-import org.springframework.batch.core.JobParametersBuilder;
+import org.apache.tomcat.util.http.fileupload.FileUtils;
+import org.springframework.batch.core.*;
 import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -16,62 +13,72 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
 @CrossOrigin("http://localhost:8081")
 @Controller
 @RequestMapping("/api/csv")
-public class VisitController{
+public class VisitController {
 
     @Autowired
     VisitService visitService;
-
     @Autowired
     @Qualifier("myJobLauncher")
     private JobLauncher jobLauncher;
-
     @Autowired
     @Qualifier("importVisitJob")
     Job importVisitJob;
+    public final static String tempDir = "C:\\tempUpload\\";
 
+    @GetMapping("/process")
+    public ResponseEntity<ResponseMessage> process() throws IOException {
+        String message = "";
+        try {
+            JobParameters jobParameters = new JobParametersBuilder().toJobParameters();
+            jobLauncher.run(importVisitJob, jobParameters);
+
+            message = "File processed successfully!";
+            return ResponseEntity.status(HttpStatus.OK).body(new ResponseMessage(message));
+        } catch (Exception e) {
+            message = "Could not processed the file!";
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new ResponseMessage(message));
+        }
+    }
 
     @PostMapping("/upload")
-    public ResponseEntity<ResponseMessage> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ResponseMessage> upload(@RequestParam("file") MultipartFile file) throws IOException {
         String message = "";
 
-        if (CSVHelper.hasCSVFormat(file)) {
-            try {
-                //save file
-                visitService.save(file);
+        // Clean temp dir
+        File folder = new File(tempDir);
+        File[] listOfFiles = folder.listFiles();
+        if(listOfFiles.length>0)
+            FileUtils.cleanDirectory(folder);
 
-                // Async Batch processing
-                JobParameters jobParameters = new JobParametersBuilder().addString("source", "Spring Boot")
-                        .addString("filePath", file.getOriginalFilename())
-                        .toJobParameters();
-                jobLauncher.run(importVisitJob, jobParameters);
-
-                message = "File " + file.getOriginalFilename() + " uploaded & processed successfully!";
-                return ResponseEntity.status(HttpStatus.OK).body(new ResponseMessage(message));
-            } catch (Exception e) {
-                message = "Could not upload the file " + file.getOriginalFilename() + "!";
-                return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new ResponseMessage(message));
-            }
+        String fileName = file.getOriginalFilename();
+        try {
+            // It is assumed that you have a physical folder C:\tempUpload
+            file.transferTo(new File(tempDir + fileName));
+            message = "File " + fileName + " uploaded & processed successfully!";
+            return ResponseEntity.status(HttpStatus.OK).body(new ResponseMessage(message));
+        } catch (Exception e) {
+            message = "Could not upload the file " + fileName + "!";
+            return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new ResponseMessage(message));
         }
-        message = "Please upload a csv file!";
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ResponseMessage(message));
     }
 
     @GetMapping("/visits")
-    public ResponseEntity<Long> getVisitsCount() {
+    public ResponseEntity<List<Object[]>> getVisitsCount() {
         try {
-            long visits = visitService.getAllVisits().size();
+            List<Object[]> result = visitService.getUserVisit();
 
-            if (visits == 0) {
+            if (result.size() == 0) {
                 return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
 
-            return new ResponseEntity<>(visits, HttpStatus.OK);
+            return new ResponseEntity<>(result, HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }

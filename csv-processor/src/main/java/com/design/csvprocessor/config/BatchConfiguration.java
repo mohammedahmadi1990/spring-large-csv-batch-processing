@@ -4,6 +4,7 @@ import javax.sql.DataSource;
 
 import com.design.csvprocessor.batch.JobCompletionNotificationListener;
 import com.design.csvprocessor.batch.VisitItemProcessor;
+import com.design.csvprocessor.controller.VisitController;
 import com.design.csvprocessor.model.Visit;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -31,6 +32,8 @@ import org.springframework.core.io.PathResource;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.io.File;
+
 
 @Configuration
 @EnableBatchProcessing
@@ -55,12 +58,11 @@ public class BatchConfiguration
     @StepScope
     public FlatFileItemReader<Visit> reader(@Value("#{jobParameters[filePath]}") String pathToFile)
     {
-
+        File folder = new File(VisitController.tempDir);
+        File[] listOfFiles = folder.listFiles();
         FlatFileItemReader<Visit> reader = new FlatFileItemReader<Visit>();
-        reader.setResource(new FileSystemResource(pathToFile));
-//        reader.setResource(new PathResource(pathToFile));
-//        reader.setResource(new ClassPathResource("sample.csv")); // local
-        reader.setStrict(false);
+        reader.setResource(new FileSystemResource(listOfFiles[0]));
+        //reader.setStrict(false);
         reader.setLinesToSkip(1);
         reader.setLineMapper(new DefaultLineMapper<Visit>()
         {
